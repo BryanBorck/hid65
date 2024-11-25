@@ -12,23 +12,24 @@ import {
   DollarSign,
   Activity,
 } from "lucide-react";
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
+import {
+  Bar,
+  BarChart,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  XAxis,
+  YAxis,
+} from "recharts";
+import { useEffect, useState } from "react";
 
-// Simulated real-time data - In a real app, this would come from an API
-const consumptionData = [
-  { hour: "00:00", watts: 2400 },
-  { hour: "02:00", watts: 1398 },
-  { hour: "04:00", watts: 9800 },
-  { hour: "06:00", watts: 3908 },
-  { hour: "08:00", watts: 4800 },
-  { hour: "10:00", watts: 3800 },
-  { hour: "12:00", watts: 4300 },
-  { hour: "14:00", watts: 5300 },
-  { hour: "16:00", watts: 6300 },
-  { hour: "18:00", watts: 7300 },
-  { hour: "20:00", watts: 4300 },
-  { hour: "22:00", watts: 3300 },
-];
+interface DataProps {
+  realPower: number[];
+  apparentPower: number[];
+  vrms: number[];
+  irms: number[];
+  powerFactor: number[];
+}
 
 const notifications = [
   {
@@ -57,8 +58,71 @@ const notifications = [
 ];
 
 export default function DashboardPage() {
+  const [data, setData] = useState<DataProps>({
+    realPower: [],
+    apparentPower: [],
+    vrms: [],
+    irms: [],
+    powerFactor: [],
+  });
+
+  const fetchData = async () => {
+    const response = await fetch("/api/get-data", {
+      method: "POST",
+    });
+    const result = await response.json();
+    setData(result);
+    console.log("Data from Arduino", result);
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const realPowerChartData = data.realPower.map(
+    (value: number, index: number) => ({
+      hour: `Hour ${index + 1}`,
+      watts: value,
+    })
+  );
+
+  const apparentPowerChartData = data.apparentPower.map(
+    (value: number, index: number) => ({
+      hour: `Hour ${index + 1}`,
+      watts: value,
+    })
+  );
+
+  const vrmsChartData = data.vrms.map((value: number, index: number) => ({
+    hour: `Hour ${index + 1}`,
+    watts: value,
+  }));
+
+  const irmsChartData = data.irms.map((value: number, index: number) => ({
+    hour: `Hour ${index + 1}`,
+    watts: value,
+  }));
+
+  const powerFactorChartData = data.powerFactor.map(
+    (value: number, index: number) => ({
+      hour: `Hour ${index + 1}`,
+      watts: value,
+    })
+  );
+
+  const handleDownload = () => {
+    // Trigger the file download
+    const fileUrl = "/data/mock.txt"; // Path to the file in the public folder
+    const link = document.createElement("a");
+    link.href = fileUrl;
+    link.download = "mock.txt"; // Name of the file for the download
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
-    <div className="flex-1 space-y-4 py-4 px-8 pt-6 mt-20">
+    <div className="flex-1 space-y-4 py-4 px-8 pt-6 mt-20 pb-36">
       <div className="flex items-center justify-between space-y-2">
         <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
         <div className="flex items-center space-x-2">
@@ -66,7 +130,7 @@ export default function DashboardPage() {
             <Calendar className="h-4 w-4" />
             Last 24 Hours
           </Button>
-          <Button>
+          <Button onClick={handleDownload}>
             <Download className="mr-2 h-4 w-4" />
             Download
           </Button>
@@ -139,13 +203,13 @@ export default function DashboardPage() {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
             <Card className="col-span-4">
               <CardHeader>
-                <CardTitle>Consumption Overview</CardTitle>
+                <CardTitle>Real Power Overview</CardTitle>
               </CardHeader>
               <CardContent className="pl-2">
                 <ResponsiveContainer width="100%" height={350}>
-                  <BarChart data={consumptionData}>
+                  <BarChart data={realPowerChartData}>
                     <XAxis
-                      dataKey="hour"
+                      dataKey="s"
                       stroke="#888888"
                       fontSize={12}
                       tickLine={false}
@@ -198,6 +262,172 @@ export default function DashboardPage() {
                     </Alert>
                   ))}
                 </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+        <TabsContent value="reports" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
+            <Card className="">
+              <CardHeader>
+                <CardTitle>Real Power Overview</CardTitle>
+              </CardHeader>
+              <CardContent className="pl-2">
+                <ResponsiveContainer width="100%" height={350}>
+                  <BarChart data={realPowerChartData}>
+                    <XAxis
+                      dataKey="s"
+                      stroke="#888888"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis
+                      stroke="#888888"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(value) => `${value}W`}
+                    />
+                    <Bar
+                      dataKey="watts"
+                      fill="currentColor"
+                      radius={[4, 4, 0, 0]}
+                      className="fill-primary"
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+            <Card className="">
+              <CardHeader>
+                <CardTitle>Apparent Power Overview</CardTitle>
+              </CardHeader>
+              <CardContent className="pl-2">
+                <ResponsiveContainer width="100%" height={350}>
+                  <BarChart data={apparentPowerChartData}>
+                    <XAxis
+                      dataKey="s"
+                      stroke="#888888"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis
+                      stroke="#888888"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(value) => `${value}W`}
+                    />
+                    <Bar
+                      dataKey="watts"
+                      fill="currentColor"
+                      radius={[4, 4, 0, 0]}
+                      className="fill-gray-500"
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+            <Card className="">
+              <CardHeader>
+                <CardTitle>Voltage Overview</CardTitle>
+              </CardHeader>
+              <CardContent className="pl-2">
+                <ResponsiveContainer width="100%" height={350}>
+                  <LineChart data={vrmsChartData}>
+                    <XAxis
+                      dataKey="s"
+                      stroke="#888888"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis
+                      stroke="#888888"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(value) => `${value}W`}
+                    />
+                    <Line
+                      type="monotone"
+                      color="red"
+                      dataKey="watts"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+            <Card className="">
+              <CardHeader>
+                <CardTitle>Current Overview</CardTitle>
+              </CardHeader>
+              <CardContent className="pl-2">
+                <ResponsiveContainer width="100%" height={350}>
+                  <LineChart data={irmsChartData}>
+                    <XAxis
+                      dataKey="s"
+                      stroke="#888888"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis
+                      stroke="#888888"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(value) => `${value}W`}
+                    />
+                    <Line
+                      type="monotone"
+                      color="cyan"
+                      dataKey="watts"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      dot={false}
+                      className="stroke-gray-500"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+            <Card className="">
+              <CardHeader>
+                <CardTitle>Power Factor Overview</CardTitle>
+              </CardHeader>
+              <CardContent className="pl-2">
+                <ResponsiveContainer width="100%" height={350}>
+                  <LineChart data={powerFactorChartData}>
+                    <XAxis
+                      dataKey="s"
+                      stroke="#888888"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis
+                      stroke="#888888"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(value) => `${value}W`}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="watts"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      dot={false}
+                      className="stroke-gray-500"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
           </div>
